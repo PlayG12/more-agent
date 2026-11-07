@@ -1,0 +1,5 @@
+langgraph>=0.2.70
+openai>=1.40.0
+edge-tts>=6.1.0
+streamlit>=1.36.0
+python-dotenv>=1.0.0
