@@ -7,6 +7,8 @@
 - 节点完成时通过 updates 流带回 task_log 记录（耗时、产出摘要）；
 - 前端据此把每个 Agent 的卡片从 等待中 -> 执行中 -> 完成/失败 实时刷新。
 """
+import os
+
 import streamlit as st
 
 import config
@@ -22,13 +24,24 @@ AGENTS = [
 ]
 NAMES = dict(AGENTS)
 
+
+def _reset_and_delete() -> None:
+    """重置按钮回调：删除本次生成的音频、清空输入，页面随重跑回到初始状态。"""
+    audio = st.session_state.pop("last_audio", "")
+    if audio and os.path.exists(audio):
+        try:
+            os.remove(audio)
+        except OSError:
+            pass
+    st.session_state["topic_input"] = ""
+
 st.set_page_config(page_title="More-Agent 多 Agent 创作流水线", layout="wide")
 st.title("More-Agent")
 
 if config.LLM_MOCK or config.IMAGE_MOCK:
     st.caption("未检测到部分 API Key，对应 Agent 以 mock 模式运行；在 .env 中配置后自动切换为真实接口。")
 
-user_input = st.text_input("输入你的主题需求", placeholder="例：做一个关于秋日森林的宣传内容")
+user_input = st.text_input("输入你的主题需求", placeholder="例：做一个关于秋日森林的宣传内容", key="topic_input")
 
 if st.button("开始创作", type="primary", disabled=not user_input):
     # 每个 Agent 一张状态卡片
@@ -86,3 +99,14 @@ if st.button("开始创作", type="primary", disabled=not user_input):
     # 完整执行日志（对应"执行过程可见"的评分点）
     with st.expander("查看完整 task_log"):
         st.json(final_state.get("task_log", []))
+
+    # 记录本次产物，供页面底部的重置按钮使用
+    st.session_state["last_audio"] = final_state.get("audio_path") or ""
+
+
+# 页面最下方的重置按钮：生成过内容后才出现
+if st.session_state.get("last_audio"):
+    st.divider()
+    if st.button("重置并删除本次生成的内容", on_click=_reset_and_delete):
+        st.rerun()
+    st.caption("重置会清空页面并删除本次生成的音频文件；配图为远程链接，无法删除。")
