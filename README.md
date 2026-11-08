@@ -30,7 +30,10 @@
 ## 目录结构
 
 ```
-├── app.py            # Streamlit 入口：输入 + 实时状态面板 + 产物展示
+├── app.py            # 第一版入口：状态卡片 + 产物展示
+├── start.py          # 一键启动两版网页（自动打开 8501 / 8502）
+├── app_v2.py         # 第二版入口：notebook 风格「执行情况」页（不影响第一版）
+├── result_server.py  # 第二版的结果标签页服务（端口 8800，关闭标签页自动清理）
 ├── graph.py          # StateGraph 编排（fan-out 并行 + barrier 汇总）
 ├── state.py          # AgentState / TaskRecord 定义
 ├── config.py         # .env 配置读取；缺 key 自动进入 mock 模式
@@ -46,6 +49,17 @@
     └── tts_api.py        # edge-tts，免费无需 key，带重试
 ```
 
+## 两个前端页面
+
+| 页面 | 文件 | 呈现方式 |
+|---|---|---|
+| 第一版 | `app.py` | 每个 Agent 一张状态卡片（等待中/执行中/完成），底部展示文案、配图、语音 |
+| 第二版 | `app_v2.py` | notebook 讲义风格：`[n]` 代码格展示 Agent 真实源码，输出格展示 Thought / Action / Observation / Final，执行中实时刷新；生成完成后自动打开结果标签页，关闭标签页后内容自动删除 |
+
+两版共用同一张 `graph` 与同一套 Agent，仅呈现方式不同；第二版为独立入口，不修改第一版。
+
+第二版的结果标签页由 [result_server.py](result_server.py) 提供（本地端口 8800）：执行开始时先打开「生成中」页面，完成后自动刷新出文案、配图、语音；关闭该标签页会通知服务清理页面内容与音频副本（刷新页面不会误删）。
+
 ## 快速开始
 
 ### 首次安装（只做一次）
@@ -57,23 +71,20 @@ pip install -r requirements.txt
 cp .env.example .env            # 填入你的 key（也可不填，先跑 mock）
 ```
 
-### 启动方式（每次使用）
+### 启动方式（每次使用，一条命令启动两版）
 
-方式一（推荐，免激活环境）：
-
-```powershell
-.venv\Scripts\streamlit.exe run app.py
-```
-
-方式二（先激活虚拟环境）：
+在项目根目录执行：
 
 ```powershell
-.venv\Scripts\activate
-streamlit run app.py
+.venv\Scripts\python.exe start.py
 ```
 
-启动后浏览器打开 http://localhost:8501 ，输入主题，点击「开始创作」。
-停止服务：在终端按 `Ctrl + C`。
+脚本会同时启动两版网页，并约 8 秒后自动在浏览器打开两个标签页：
+
+- 第一版：http://localhost:8501 （输入主题，点击「开始创作」）
+- 第二版：http://localhost:8502 （输入主题，点击「开始执行」）
+
+停止全部服务：在该终端按 `Ctrl + C`。
 
 > 首次运行 Streamlit 会提示输入邮箱（Welcome to Streamlit），**直接回车跳过**即可。
 
@@ -91,6 +102,7 @@ streamlit run app.py
 
 - **语音合成偶发失败**：edge-tts 走公共服务，网络抖动时自动重试 3 次（见 `tools/tts_api.py`）。
 - **想换模型/厂商**：三个接口都是 OpenAI 兼容或独立封装，改 `.env` 里的 `BASE_URL` / `MODEL` 即可，业务代码不用动。
+- **第二版没有自动弹出结果页**：浏览器拦截了弹窗，点页面底部的「打开结果页」按钮即可；也可在浏览器地址栏允许本站弹窗。
 
 ## 作者
 

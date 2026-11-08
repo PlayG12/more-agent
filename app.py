@@ -23,7 +23,7 @@ AGENTS = [
 NAMES = dict(AGENTS)
 
 st.set_page_config(page_title="More-Agent 多 Agent 创作流水线", layout="wide")
-st.title("More-Agent：一句话生成图文语音作品")
+st.title("More-Agent")
 
 if config.LLM_MOCK or config.IMAGE_MOCK:
     st.caption("未检测到部分 API Key，对应 Agent 以 mock 模式运行；在 .env 中配置后自动切换为真实接口。")
